@@ -6,12 +6,11 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const CONSUMER_KEY = 'q7jtnu8gnCIflP3ceRiO4EAzk9YIOeY9uVAV9GgYrCx5LDyu';
-const CONSUMER_SECRET = 'ZZ2VAGhAGfhvtWCifLBSsmDmrJrVCGAaMMn2LvfgTQIKpQiZPc9Apm59eGSnkb2e';
-const SHORTCODE = '174379';
-const PASSKEY = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919';
-const CALLBACK_URL = 'https://milan-mpesa-backend.onrender.com/callback';
-
+const CONSUMER_KEY = process.env.CONSUMER_KEY;
+const CONSUMER_SECRET = process.env.CONSUMER_SECRET;
+const SHORTCODE = process.env.SHORTCODE || '174379';
+const PASSKEY = process.env.PASSKEY;
+const CALLBACK_URL = process.env.CALLBACK_URL;
 async function getToken(){
   const auth = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
   const res = await axios.get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',{
