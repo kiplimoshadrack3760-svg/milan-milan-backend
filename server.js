@@ -13,12 +13,19 @@ const PASSKEY = process.env.PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c8930
 const CALLBACK_URL = 'https://milan-milan-backend.onrender.com/callback';
 
 async function getToken(){
-  const auth = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
-  const res = await axios.get(
-    'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
-    { headers: { Authorization: `Basic ${auth}` } }
-  );
-  return res.data.access_token;
+  try{
+    const auth = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
+    const res = await axios.get(
+      'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
+      { headers: { Authorization: `Basic ${auth}` } }
+    );
+    console.log('Token obtained successfully');
+    return res.data.access_token;
+  }catch(err){
+    const tokenErr = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error('Token error:', tokenErr);
+    throw new Error('Token failed: ' + tokenErr);
+  }
 }
 
 app.post('/pay', async(req, res)=>{
