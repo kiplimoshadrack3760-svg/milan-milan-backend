@@ -66,10 +66,14 @@ app.post('/pay', async(req, res)=>{
     res.json({ success: true, data: response.data });
 
   }catch(err){
-    console.error('M-Pesa error:', err.response ? err.response.data : err.message);
+    const errMsg = err.response ? JSON.stringify(err.response.data) : err.message;
+    console.error('M-Pesa error:', errMsg);
+    console.error('Consumer Key:', CONSUMER_KEY ? CONSUMER_KEY.substring(0,10)+'...' : 'NOT SET');
+    console.error('Shortcode:', SHORTCODE);
+    console.error('Passkey set:', PASSKEY ? 'YES' : 'NO');
     res.status(500).json({
       success: false,
-      error: err.response ? JSON.stringify(err.response.data) : err.message
+      error: errMsg
     });
   }
 });
