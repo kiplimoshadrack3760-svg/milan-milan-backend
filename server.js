@@ -15,16 +15,21 @@ const CALLBACK_URL = 'https://milan-milan-backend.onrender.com/callback';
 async function getToken(){
   try{
     const auth = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
+    console.log('Requesting token with key:', CONSUMER_KEY ? CONSUMER_KEY.substring(0,8)+'...' : 'NOT SET');
     const res = await axios.get(
       'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
-      { headers: { Authorization: `Basic ${auth}` } }
+      { 
+        headers: { Authorization: `Basic ${auth}` },
+        timeout: 15000
+      }
     );
-    console.log('Token obtained successfully');
+    console.log('Token obtained successfully:', res.data.access_token ? 'YES' : 'NO');
     return res.data.access_token;
   }catch(err){
-    const tokenErr = err.response ? JSON.stringify(err.response.data) : err.message;
-    console.error('Token error:', tokenErr);
-    throw new Error('Token failed: ' + tokenErr);
+    console.error('Token error status:', err.response ? err.response.status : 'NO RESPONSE');
+    console.error('Token error data:', err.response ? JSON.stringify(err.response.data) : err.message);
+    console.error('Token error code:', err.code);
+    throw new Error('Token failed: ' + (err.response ? JSON.stringify(err.response.data) : err.message));
   }
 }
 
