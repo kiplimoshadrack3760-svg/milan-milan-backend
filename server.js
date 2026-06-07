@@ -9,48 +9,77 @@ app.use(express.json());
 const CONSUMER_KEY = process.env.CONSUMER_KEY;
 const CONSUMER_SECRET = process.env.CONSUMER_SECRET;
 const SHORTCODE = process.env.SHORTCODE || '174379';
-const PASSKEY = process.env.PASSKEY;
-const CALLBACK_URL = process.env.CALLBACK_URL;
+const PASSKEY = process.env.PASSKEY || 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919';
+const CALLBACK_URL = 'https://milan-milan-backend.onrender.com/callback';
+
 async function getToken(){
   const auth = Buffer.from(`${CONSUMER_KEY}:${CONSUMER_SECRET}`).toString('base64');
-  const res = await axios.get('https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',{
-    headers:{Authorization:`Basic ${auth}`}
-  });
+  const res = await axios.get(
+    'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials',
+    { headers: { Authorization: `Basic ${auth}` } }
+  );
   return res.data.access_token;
 }
 
-app.post('/pay', async(req,res)=>{
+app.post('/pay', async(req, res)=>{
   try{
-    const {phone, amount} = req.body;
-    const token = await getToken();
-    const timestamp = new Date().toISOString().replace(/[^0-9]/g,'').slice(0,14);
+    const { phone, amount } = req.body;
+
+    // Format timestamp as YYYYMMDDHHmmss
+    const now = new Date();
+    const timestamp =
+      now.getFullYear().toString() +
+      String(now.getMonth()+1).padStart(2,'0') +
+      String(now.getDate()).padStart(2,'0') +
+      String(now.getHours()).padStart(2,'0') +
+      String(now.getMinutes()).padStart(2,'0') +
+      String(now.getSeconds()).padStart(2,'0');
+
+    // Generate password
     const password = Buffer.from(`${SHORTCODE}${PASSKEY}${timestamp}`).toString('base64');
-    const formattedPhone = '254'+phone.replace(/^0/,'').replace(/^\+254/,'');
-    const response = await axios.post('https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest',{
-      BusinessShortCode: SHORTCODE,
-      Password: password,
-      Timestamp: timestamp,
-      TransactionType: 'CustomerPayBillOnline',
-      Amount: amount,
-      PartyA: formattedPhone,
-      PartyB: SHORTCODE,
-      PhoneNumber: formattedPhone,
-      CallBackURL: CALLBACK_URL,
-      AccountReference: 'Milan Accessories',
-      TransactionDesc: 'Payment for order'
-    },{headers:{Authorization:`Bearer ${token}`}});
-    res.json({success:true, data:response.data});
+
+    // Format phone — ensure it starts with 254
+    const formattedPhone = '254' + phone.replace(/^0/, '').replace(/^\+254/, '').replace(/^254/, '');
+
+    // Get token
+    const token = await getToken();
+
+    // STK Push
+    const response = await axios.post(
+      'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest',
+      {
+        BusinessShortCode: SHORTCODE,
+        Password: password,
+        Timestamp: timestamp,
+        TransactionType: 'CustomerPayBillOnline',
+        Amount: Math.ceil(amount),
+        PartyA: formattedPhone,
+        PartyB: SHORTCODE,
+        PhoneNumber: formattedPhone,
+        CallBackURL: CALLBACK_URL,
+        AccountReference: 'Milan Accessories',
+        TransactionDesc: 'Payment for order'
+      },
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+
+    res.json({ success: true, data: response.data });
+
   }catch(err){
-    res.status(500).json({success:false, error:err.message});
+    console.error('M-Pesa error:', err.response ? err.response.data : err.message);
+    res.status(500).json({
+      success: false,
+      error: err.response ? JSON.stringify(err.response.data) : err.message
+    });
   }
 });
 
-app.post('/callback', (req,res)=>{
+app.post('/callback', (req, res)=>{
   console.log('M-Pesa callback:', JSON.stringify(req.body));
-  res.json({ResultCode:0, ResultDesc:'Success'});
+  res.json({ ResultCode: 0, ResultDesc: 'Success' });
 });
 
-app.get('/', (req,res)=>res.send('Milan Accessories M-Pesa Backend Running!'));
+app.get('/', (req, res) => res.send('Milan Accessories M-Pesa Backend is running!'));
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, ()=>console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
